@@ -56,7 +56,7 @@ dataloaders = [trainloader, validloader, testloader]
 
 with open('cat_to_name.json', 'r') as f:
     cat_to_name = json.load(f)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() and args.gpu else "cpu")
     model = models.vgg19(weights="VGG19_Weights.DEFAULT")
     for param in model.parameters():
         param.requires_grad = False
