@@ -4,14 +4,27 @@ from torch import nn
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
-#import train as test_dir
 import json
+import argparse
 
-test_dir = 'flowers/test' 
+
+def get_input_args():    
+    # command lines for user input 
+    parser = argparse.ArgumentParser(description='train.py')
+    parser.add_argument('--checkpoint', type=str, default='checkpoint.pth', help='path to save checkpoint')
+    # data directory
+    parser.add_argument("--image_path", type=str, default= './flowers/test/1/image_06743.jpg', help='Path to flower image')
+    parser.add_argument('--category_names', type=str, default='./cat_to_names.json', help='model architecture')
+    parser.add_argument('--top_k', type=int, default=5, help='learning rate')
+    parser.add_argument('--gpu', action='store_true', default=False, help='use GPU for training')
+    return parser.parse_args()
+
+args = get_input_args()
+#checkpoint_path = 'checkpoint.pth'
 
 def LoadModel(path):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = models.vgg16(pretrained=True)
+    device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
+    model = models.vgg19(weights="VGG19_Weights.DEFAULT")
     for param in model.parameters():
         param.requires_grad = False
     classifier = nn.Sequential(nn.Linear(25088, 1024),
@@ -22,14 +35,13 @@ def LoadModel(path):
                                nn.Linear(500, 102),
                                nn.LogSoftmax(dim=1))
     model.classifier = classifier
-    #map_location = 'cuda' if torch.cuda.is_available() else 'cpu'
-    checkpoint = torch.load(path, map_location=device)
+    checkpoint = torch.load(f=path,map_location=device,weights_only=False)
     model.class_to_idx = checkpoint['class_to_idx']
-    model.load_state_dict(checkpoint['state_dict'])
+    model.load_state_dict(checkpoint['state_dict'])  
     model.to(device)
     return model
 
-model = LoadModel('checkpoint.pth')
+model = LoadModel(args.checkpoint)
 
 def process_image(imagePath):
     ''' Scales, crops, and normalizes a PIL image for a PyTorch model,
@@ -41,7 +53,7 @@ def process_image(imagePath):
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
-    image = Image.open(imagePath)
+    image = Image.open(args.image_path)
     input_tensor = preprocess(image)
     return input_tensor
 
@@ -66,30 +78,29 @@ def imshow(image, ax=None, title=None):
     
     return ax
 
-image = process_image(test_dir + '/1/image_06743.jpg')
+image = process_image(args.image_path)
 imshow(image)
 
-def predict(image_path, model, topk=5):
+def predict(image_path, model,top_k):
     ''' Predict the class (or classes) of an image using a trained deep learning model.
     '''
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    image = process_image(image_path)
+    device = torch.device("cuda" if torch.cuda.is_available()and args.gpu else "cpu")
+    image = process_image(args.image_path)
     image = image.unsqueeze(0).to(device)
     model.eval()
     with torch.no_grad():
         output = model(image)
-    probs, classes = torch.topk(torch.exp(output), topk)
+    probs, classes = torch.topk(torch.exp(output), top_k)
     probs = probs.cpu().numpy()[0]
     classes = classes.cpu().numpy()[0]
     return probs, classes
 
-with open('cat_to_name.json', 'r') as f:
-    cat_to_name = json.load(f)
-   
-    image_path = test_dir + '/1/image_06743.jpg'
+with open(args.category_names, 'r') as f:
+    cat_to_name = json.load(f)   
+    image_path = args.image_path
     # Load model
-    model = LoadModel('checkpoint.pth')
-    probs, classes = predict(image_path, model)
+    model = LoadModel(args.checkpoint)
+    probs, classes = predict(args.image_path, model,args.top_k)
     print(image_path)
     print(probs)
-    print([cat_to_name[str(index)] for index in classes])
+    #print([cat_to_name[str(index)] for index in classes])

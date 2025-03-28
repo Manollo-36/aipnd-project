@@ -1,19 +1,31 @@
 import torch
 from torch import nn
 from torch import optim
-import torch.nn.functional as F
 from torchvision import datasets, transforms, models
-from collections import OrderedDict
-from PIL import Image 
-import numpy as np
-import matplotlib.pyplot as plt
-from torch.autograd import Variable
+import argparse
 import json
 
-data_dir = 'flowers'
-train_dir = data_dir + '/train'
-valid_dir = data_dir + '/valid'
-test_dir = data_dir + '/test'
+# data_dir = 'flowers'
+# train_dir = data_dir + '/train'
+# valid_dir = data_dir + '/valid'
+# test_dir = data_dir + '/test'
+
+def get_input_args():    
+    # command lines for user input 
+    parser = argparse.ArgumentParser(description='train.py')
+    parser.add_argument('--save_dir', type=str, default='checkpoint.pth',required=True, help='path to save checkpoint')
+    # data directory
+    parser.add_argument("--data_dir", type=str, default= './flowers',required = False, help='Path to folder of flower images')
+    parser.add_argument("--train_dir", type=str, default= './flowers/train', help='Path to folder of train images')
+    parser.add_argument("--valid_dir", type=str, default= './flowers/valid', help='Path to folder of valid images')
+    parser.add_argument("--test_dir", type=str, default= './flowers/test', help='Path to folder of test images')
+    parser.add_argument('--model_arch', type=str, default='vgg16', help='model architecture')
+    parser.add_argument('--learning_rate', type=float, default=0.001, help='learning rate')
+    parser.add_argument('--hidden_units', type=int, default=512, help='number of hidden units')
+    parser.add_argument('--epochs', type=int, default=1, help='number of epochs')
+    parser.add_argument('--gpu', action='store_true', default=False, help='use GPU for training')
+    return parser.parse_args()
+args = get_input_args()
 
 train_transforms = transforms.Compose([transforms.RandomRotation(30),
                                        transforms.RandomResizedCrop(224),
@@ -33,9 +45,9 @@ test_transforms = transforms.Compose([transforms.Resize(255),
                                                            [0.229, 0.224, 0.225])])
 
 data_transforms = [train_transforms, valid_transforms, test_transforms]
-train_data = datasets.ImageFolder(train_dir, transform=train_transforms)
-valid_data = datasets.ImageFolder(valid_dir, transform=valid_transforms)
-test_data = datasets.ImageFolder(test_dir, transform=test_transforms)
+train_data = datasets.ImageFolder(args.train_dir, transform=train_transforms)
+valid_data = datasets.ImageFolder(args.valid_dir, transform=valid_transforms)
+test_data = datasets.ImageFolder(args.test_dir, transform=test_transforms)
 image_datasets = [train_data, valid_data, test_data]
 trainloader = torch.utils.data.DataLoader(train_data, batch_size=64, shuffle=True)
 validloader = torch.utils.data.DataLoader(valid_data, batch_size=64)
@@ -45,7 +57,7 @@ dataloaders = [trainloader, validloader, testloader]
 with open('cat_to_name.json', 'r') as f:
     cat_to_name = json.load(f)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = models.vgg16(pretrained=True)
+    model = models.vgg19(weights="VGG19_Weights.DEFAULT")
     for param in model.parameters():
         param.requires_grad = False
         
@@ -99,4 +111,13 @@ with open('cat_to_name.json', 'r') as f:
                 running_loss = 0
                 model.train()
     model.class_to_idx = train_data.class_to_idx
-    torch.save(model.state_dict(), 'checkpoint.pth')   
+    torch.save( {'hidden layer': 1024,
+                'output_size': 102,
+                'dropout': 0.5,
+                'epochs': args.epochs,#10,
+                'model architecture': args.model_arch,#'vgg19',
+                'optimizer': optimizer.state_dict(),
+                'classifier': model.classifier,
+                'learning_rate': args.learning_rate ,#0.001,
+                'state_dict': model.state_dict(),
+                'class_to_idx': model.class_to_idx}, 'checkpoint.pth')   
