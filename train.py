@@ -22,7 +22,7 @@ def get_input_args():
     parser.add_argument('--model_arch', type=str, default='VGG19', help='model architecture')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='learning rate')
     parser.add_argument('--hidden_units', type=int,nargs=2, default=[1024,500], help='number of hidden units')
-    parser.add_argument('--epochs', type=int, default=1, help='number of epochs')
+    parser.add_argument('--epochs', type=int, default=10, help='number of epochs')
     parser.add_argument('--gpu', action='store_true', default=False, help='use GPU for training')
     return parser.parse_args()
 args = get_input_args()
