@@ -14,9 +14,11 @@ def get_input_args():
     parser.add_argument('--checkpoint', type=str, default='checkpoint.pth', help='path to save checkpoint')
     # data directory
     parser.add_argument("--image_path", type=str, default= './flowers/test/1/image_06743.jpg', help='Path to flower image')
+    parser.add_argument('--model_arch', type=str, default='VGG19', help='model architecture')
     parser.add_argument('--category_names', type=str, default='./cat_to_names.json', help='model architecture')
     parser.add_argument('--top_k', type=int, default=5, help='learning rate')
     parser.add_argument('--gpu', action='store_true', default=False, help='use GPU for training')
+    parser.add_argument('--hidden_units', type=int,  nargs=2, default=[1024,500], help='number of hidden units')
     return parser.parse_args()
 
 args = get_input_args()
@@ -24,15 +26,18 @@ args = get_input_args()
 
 def LoadModel(path):
     device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
-    model = models.vgg19(weights="VGG19_Weights.DEFAULT")
+    if args.model_arch == 'VGG19':
+        model = models.vgg19(weights="VGG19_Weights.DEFAULT")
+    else:
+         model = models.vgg16(weights="VGG164_Weights.DEFAULT")
     for param in model.parameters():
         param.requires_grad = False
-    classifier = nn.Sequential(nn.Linear(25088, 1024),
+    classifier = nn.Sequential(nn.Linear(25088, args.hidden_units[1]),
                                nn.ReLU(),
                                nn.Dropout(0.2),
-                               nn.Linear(1024, 500),
+                               nn.Linear(args.hidden_units[0], out_features=args.hidden_units[1]),
                                nn.ReLU(),
-                               nn.Linear(500, 102),
+                               nn.Linear(args.hidden_units[0], [1]),
                                nn.LogSoftmax(dim=1))
     model.classifier = classifier
     checkpoint = torch.load(f=path,map_location=device,weights_only=False)

@@ -15,13 +15,13 @@ def get_input_args():
     parser = argparse.ArgumentParser(description='train.py')
     parser.add_argument('--save_dir', type=str, default='checkpoint.pth',required=True, help='path to save checkpoint')
     # data directory
-    parser.add_argument("--data_dir", type=str, default= './flowers',required = False, help='Path to folder of flower images')
+    parser.add_argument("--data_dir", type=str, default= './flowers', help='Path to folder of flower images')
     parser.add_argument("--train_dir", type=str, default= './flowers/train', help='Path to folder of train images')
     parser.add_argument("--valid_dir", type=str, default= './flowers/valid', help='Path to folder of valid images')
     parser.add_argument("--test_dir", type=str, default= './flowers/test', help='Path to folder of test images')
-    parser.add_argument('--model_arch', type=str, default='vgg16', help='model architecture')
+    parser.add_argument('--model_arch', type=str, default='VGG19', help='model architecture')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='learning rate')
-    parser.add_argument('--hidden_units', type=int, default=512, help='number of hidden units')
+    parser.add_argument('--hidden_units', type=int,nargs=2, default=[1024,500], help='number of hidden units')
     parser.add_argument('--epochs', type=int, default=1, help='number of epochs')
     parser.add_argument('--gpu', action='store_true', default=False, help='use GPU for training')
     return parser.parse_args()
@@ -57,21 +57,24 @@ dataloaders = [trainloader, validloader, testloader]
 with open('cat_to_name.json', 'r') as f:
     cat_to_name = json.load(f)
     device = torch.device("cuda" if torch.cuda.is_available() and args.gpu else "cpu")
-    model = models.vgg19(weights="VGG19_Weights.DEFAULT")
+    if args.model_arch == 'VGG19':
+        model = models.vgg19(weights="VGG19_Weights.DEFAULT")
+    else:
+        model = models.vgg16(weights="VGG16_Weights.DEFAULT")
     for param in model.parameters():
         param.requires_grad = False
         
-        model.classifier = classifier = nn.Sequential(nn.Linear(25088, 1024),
+        model.classifier = classifier = nn.Sequential(nn.Linear(25088, args.hidden_units[1]),
                                 nn.ReLU(),
                                 nn.Dropout(0.2),
-                                nn.Linear(1024, 500),
+                                nn.Linear(args.hidden_units[0],args.hidden_units[1]),
                                 nn.ReLU(),
-                                nn.Linear(500, 102),
+                                nn.Linear(args.hidden_units[0], args.hidden_units[1]),
                                 nn.LogSoftmax(dim=1))
     criterion = nn.NLLLoss()
-    optimizer = optim.Adam(model.classifier.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.classifier.parameters(), args.learning_rate)
     model.to(device)
-    epochs = 1
+    epochs = args.epochs
     steps = 0
     running_loss = 0
     print_every = 5
