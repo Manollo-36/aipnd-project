@@ -26,24 +26,26 @@ args = get_input_args()
 
 def LoadModel(path):
     device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
+    print(device)
     if args.model_arch == 'VGG19':
         model = models.vgg19(weights="VGG19_Weights.DEFAULT")
     else:
          model = models.vgg16(weights="VGG164_Weights.DEFAULT")
     for param in model.parameters():
         param.requires_grad = False
-    classifier = nn.Sequential(nn.Linear(25088, args.hidden_units[1]),
-                               nn.ReLU(),
-                               nn.Dropout(0.2),
-                               nn.Linear(args.hidden_units[0], out_features=args.hidden_units[1]),
-                               nn.ReLU(),
-                               nn.Linear(args.hidden_units[0], [1]),
-                               nn.LogSoftmax(dim=1))
-    model.classifier = classifier
-    checkpoint = torch.load(f=path,map_location=device,weights_only=False)
-    model.class_to_idx = checkpoint['class_to_idx']
-    model.load_state_dict(checkpoint['state_dict'])  
-    model.to(device)
+        checkpoint = torch.load(f=path,map_location=device,weights_only=False)
+        model.class_to_idx = checkpoint['class_to_idx']
+        classifier = nn.Sequential(nn.Linear(25088, args.hidden_units[0]),
+                                nn.ReLU(),
+                                nn.Dropout(0.2),
+                                nn.Linear(args.hidden_units[0], out_features=args.hidden_units[1]),
+                                nn.ReLU(),
+                                nn.Linear(args.hidden_units[1], len( model.class_to_idx)),
+                                nn.LogSoftmax(dim=1))
+        model.classifier = classifier
+        
+        model.load_state_dict(checkpoint['state_dict'])  
+        model.to(device)
     return model
 
 model = LoadModel(args.checkpoint)
