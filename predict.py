@@ -25,12 +25,19 @@ args = get_input_args()
 #checkpoint_path = 'checkpoint.pth'
 
 def LoadModel(path):
+    print(args.gpu)
+    print(torch.cuda.is_available())
     device = torch.device('cuda' if torch.cuda.is_available() and args.gpu else 'cpu')
     print(device)
     if args.model_arch == 'VGG19':
         model = models.vgg19(weights="VGG19_Weights.DEFAULT")
+    elif args.model_arch == 'densenet121':
+        model = models.densenet121(weights="DenseNet121_Weights.DEFAULT")
+    elif args.model_arch == 'alexnet':
+        model = models.alexnet(weights="AlexNet_Weights.DEFAULT")
     else:
-         model = models.vgg16(weights="VGG164_Weights.DEFAULT")
+        print("Model architecture not recognized")
+        exit()
     for param in model.parameters():
         param.requires_grad = False
         checkpoint = torch.load(f=path,map_location=device,weights_only=False)
