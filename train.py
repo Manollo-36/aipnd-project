@@ -22,7 +22,7 @@ def get_input_args():
     parser.add_argument('--model_arch', type=str, default='VGG19', help='model architecture')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='learning rate')
     parser.add_argument('--hidden_units', type=int,nargs=2, default=[1024,500], help='number of hidden units')
-    parser.add_argument('--epochs', type=int, default=10, help='number of epochs')
+    parser.add_argument('--epochs', type=int, default=5, help='number of epochs')
     parser.add_argument('--gpu', action='store_true', default=False, help='use GPU for training')
     return parser.parse_args()
 args = get_input_args()
@@ -59,17 +59,22 @@ with open('cat_to_name.json', 'r') as f:
     device = torch.device("cuda" if torch.cuda.is_available() and args.gpu else "cpu")
     if args.model_arch == 'VGG19':
         model = models.vgg19(weights="VGG19_Weights.DEFAULT")
+    elif args.model_arch == 'densenet121':
+        model = models.densenet121(weights="DenseNet121_Weights.DEFAULT")
+    elif args.model_arch == 'alexnet':
+        model = models.alexnet(weights="AlexNet_Weights.DEFAULT")
     else:
-        model = models.vgg16(weights="VGG16_Weights.DEFAULT")
+        print("Model architecture not recognized")
+        exit()
     for param in model.parameters():
         param.requires_grad = False
         
-        model.classifier = classifier = nn.Sequential(nn.Linear(25088, args.hidden_units[1]),
+        model.classifier = classifier = nn.Sequential(nn.Linear(25088, args.hidden_units[0]),
                                 nn.ReLU(),
                                 nn.Dropout(0.2),
                                 nn.Linear(args.hidden_units[0],args.hidden_units[1]),
                                 nn.ReLU(),
-                                nn.Linear(args.hidden_units[0], args.hidden_units[1]),
+                                nn.Linear(args.hidden_units[1], len(train_data.class_to_idx)),
                                 nn.LogSoftmax(dim=1))
     criterion = nn.NLLLoss()
     optimizer = optim.Adam(model.classifier.parameters(), args.learning_rate)
